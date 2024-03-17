@@ -1,6 +1,11 @@
 
+using FluentValidation;
+using FluentValidation.AspNetCore;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Project.Data;
+using Project.Entities;
+using Project.Helpers;
 
 namespace Project
 {
@@ -10,15 +15,11 @@ namespace Project
         {
             var builder = WebApplication.CreateBuilder(args);
 
-
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
-            builder.Services.AddDbContext<AppDbContext>(opt =>
-            {
-                opt.UseSqlServer(builder.Configuration.GetConnectionString("Default"));
-            });
+            builder.Services.AddAppServices(builder);
 
             var app = builder.Build();
 
