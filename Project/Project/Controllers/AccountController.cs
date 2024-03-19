@@ -1,6 +1,8 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using Project.Data;
 using Project.DTO_s.Account;
@@ -19,10 +21,13 @@ namespace Project.Controllers
         private readonly UserManager<User> _userManager;
         private readonly SignInManager<User> _signInManager;
         private readonly IConfiguration _configuration;
+        private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly AppDbContext _dbContext;
+        private readonly IMapper _mapper;
 
-        public AccountController(AppDbContext dbContext,UserManager<User> userManager,SignInManager<User> signInManager, IConfiguration configuration)
+        public AccountController(AppDbContext dbContext,UserManager<User> userManager,SignInManager<User> signInManager, IConfiguration configuration, IHttpContextAccessor httpContextAccessor, IMapper mapper)
         {
+            _httpContextAccessor = httpContextAccessor;
             _userManager = userManager;
             _signInManager = signInManager;
             _configuration = configuration;
@@ -58,6 +63,29 @@ namespace Project.Controllers
             if (!result.Succeeded) return BadRequest(result.Errors);
 
             return Ok(newUser.Id);
+        }
+
+        [HttpPut("UpdateUser")]
+        public IActionResult UpdateUser(UserPutDto dto)
+        {
+            var accessToken = _httpContextAccessor.HttpContext!.Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
+
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var token = tokenHandler.ReadJwtToken(accessToken);
+
+            var userIdClaim = token.Claims.FirstOrDefault(c => c.Type == "UserID");
+
+            var user = _dbContext.Users.FirstOrDefault(x => x.Id == userIdClaim!.Value);
+
+            user.Name= dto.Name;
+            user.UserName = dto.UserName;
+            user.ProfileImg = dto.ProfileImg;
+            user.Description = dto.Description;
+
+            _dbContext.Update(user);
+            _dbContext.SaveChanges();
+
+            return Ok();
         }
 
         private string GetToken(string Id)

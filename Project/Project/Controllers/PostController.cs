@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+﻿    using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -61,7 +61,7 @@ namespace Project.Controllers
         [HttpGet("GetPost/{id}")]
         public IActionResult GetPost(int id)
         {
-            var post = _dbContext.Posts.Include(x => x.User).FirstOrDefault(x=>x.Id == id);
+            var post = _dbContext.Posts.Include(x => x.User).Include(x=>x.Comments).ThenInclude(x => x.User).FirstOrDefault(x=>x.Id == id);
 
             if (post is null) return NotFound();
                 
@@ -91,6 +91,7 @@ namespace Project.Controllers
             
             _mapper.Map(dto, post);
 
+            _dbContext.Update(post);
             _dbContext.SaveChanges();
 
             return Ok();

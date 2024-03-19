@@ -1,4 +1,4 @@
-﻿using Project.Entities;
+﻿using Project.DTO_s.Comment;
 
 namespace Project.DTO_s.Post
 {
@@ -10,6 +10,7 @@ namespace Project.DTO_s.Post
         public DateTime CreatedAt { get; set; }
 
         public string UserName { get; set; }
-        public List<Comment> Comments { get; set; }
+
+        public List<CommentGetDto> Comments { get; set; }
     }
 }
