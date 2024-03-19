@@ -12,7 +12,7 @@ using Project.Data;
 namespace Project.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20240316191742_first")]
+    [Migration("20240319120624_first")]
     partial class first
     {
         /// <inheritdoc />
@@ -207,7 +207,12 @@ namespace Project.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Tags")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("UserId")
+                        .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
@@ -362,9 +367,13 @@ namespace Project.Migrations
 
             modelBuilder.Entity("Project.Entities.Post", b =>
                 {
-                    b.HasOne("Project.Entities.User", null)
+                    b.HasOne("Project.Entities.User", "User")
                         .WithMany("Posts")
-                        .HasForeignKey("UserId");
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Project.Entities.Post", b =>

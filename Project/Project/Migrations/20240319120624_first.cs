@@ -167,8 +167,9 @@ namespace Project.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Caption = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Img = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Tags = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: true)
+                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -177,7 +178,8 @@ namespace Project.Migrations
                         name: "FK_Posts_AspNetUsers_UserId",
                         column: x => x.UserId,
                         principalTable: "AspNetUsers",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(

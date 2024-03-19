@@ -67,7 +67,7 @@ namespace Project.Controllers
             var token = new JwtSecurityToken(
                             issuer: _configuration["JWT:ValidIssuer"],
                             audience: _configuration["JWT:ValidAudience"],
-                            expires: DateTime.Now.AddMinutes(3),
+                            expires: DateTime.Now.AddHours(1),
                             claims: new List<Claim> { new Claim("UserID",Id) },
                             signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
                             );
