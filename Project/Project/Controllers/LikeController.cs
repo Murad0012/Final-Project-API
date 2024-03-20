@@ -1,5 +1,4 @@
 ﻿using AutoMapper;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Project.Data;
@@ -11,27 +10,27 @@ namespace Project.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class CommentController : ControllerBase
+    public class LikeController : ControllerBase
     {
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly AppDbContext _dbContext;
-        public CommentController(IHttpContextAccessor httpContextAccessor, AppDbContext dbContext)
+
+        public LikeController(IHttpContextAccessor httpContextAccessor, AppDbContext dbContext)
         {
             _httpContextAccessor = httpContextAccessor;
             _dbContext = dbContext;
         }
 
         [HttpPost]
-        public IActionResult AddComment(int postId,[FromForm]CommentPostDto dto)
+        public IActionResult AddComment(int postId)
         {
-            var comment = new Comment
+            var like = new Like
             {
                 UserId = GetLoggedUserId(),
                 PostId = postId,
-                Description = dto.Description,
             };
 
-            _dbContext.Comments.Add(comment);
+            _dbContext.Likes.Add(like);
             _dbContext.SaveChanges();
 
             return Ok();
