@@ -15,6 +15,8 @@ namespace Project.Automapper
             CreateMap<PostPutDto, Post>();
             CreateMap<Comment, CommentGetDto>().ForMember((dest => dest.UserName), (opt) => opt.MapFrom(s => s.User.UserName));
             CreateMap<UserPutDto, User>();
+            CreateMap<User, UserDetailedGetDto>();
+            CreateMap<Post, PostDto>();
         }
     }
 }

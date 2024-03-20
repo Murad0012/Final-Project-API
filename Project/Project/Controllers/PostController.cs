@@ -27,18 +27,11 @@ namespace Project.Controllers
         }
 
         [HttpPost("CreatePost")]
-        public IActionResult CreatePost([FromBody] PostDto dto)
+        public IActionResult CreatePost([FromForm] PostDto dto)
         {
-            var accessToken = _httpContextAccessor.HttpContext!.Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
-
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var token = tokenHandler.ReadJwtToken(accessToken);
-
-            var userIdClaim = token.Claims.FirstOrDefault(c => c.Type == "UserID");
-
             var post = new Post
             {
-                UserId = userIdClaim!.Value,
+                UserId = GetLoggedUserId(),
                 Caption = dto.Caption,
                 Img = dto.Img,
                 Tags = dto.Tags,
@@ -73,7 +66,7 @@ namespace Project.Controllers
         [HttpDelete("DeletePost/{id}")]
         public IActionResult DeletePost(int id)
         {
-            var post = _dbContext.Posts.FirstOrDefault(x => x.Id == id);
+            var post = _dbContext.Posts.Include(x=>x.Comments).FirstOrDefault(x => x.Id == id);
 
             if (post is null) return NotFound();
 
@@ -84,7 +77,7 @@ namespace Project.Controllers
         }
 
         [HttpPut("UpdatePost/{id}")]
-        public IActionResult UpdatePost(int id,PostPutDto dto)
+        public IActionResult UpdatePost(int id,[FromForm] PostPutDto dto)
         {
             var post = _dbContext.Posts.FirstOrDefault(x=>x.Id == id);
             if (post is null) return NotFound();
@@ -95,6 +88,19 @@ namespace Project.Controllers
             _dbContext.SaveChanges();
 
             return Ok();
+        }
+
+        //JWT Token Method
+        private string GetLoggedUserId()
+        {
+            var accessToken = _httpContextAccessor.HttpContext!.Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
+
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var token = tokenHandler.ReadJwtToken(accessToken);
+
+            var userIdClaim = token.Claims.FirstOrDefault(c => c.Type == "UserID");
+
+            return userIdClaim!.Value;
         }
     }
 }

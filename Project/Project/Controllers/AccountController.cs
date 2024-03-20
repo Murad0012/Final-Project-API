@@ -2,10 +2,12 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using Project.Data;
 using Project.DTO_s.Account;
+using Project.DTO_s.Post;
 using Project.Entities;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
@@ -32,10 +34,11 @@ namespace Project.Controllers
             _signInManager = signInManager;
             _configuration = configuration;
             _dbContext = dbContext;
+            _mapper = mapper;
         }
 
         [HttpPost("Login")]
-        public async Task<IActionResult> Login([FromBody] LoginDto dto)
+        public async Task<IActionResult> Login([FromForm] LoginDto dto)
         {
             var result = await _signInManager.PasswordSignInAsync(dto.UserName, dto.Password,false,false);
 
@@ -49,7 +52,7 @@ namespace Project.Controllers
         }
 
         [HttpPost("Register")]
-        public async Task<IActionResult> Register([FromBody] RegisterDto dto)
+        public async Task<IActionResult> Register([FromForm] RegisterDto dto)
         {
             var newUser = new User
             {
@@ -66,16 +69,9 @@ namespace Project.Controllers
         }
 
         [HttpPut("UpdateUser")]
-        public IActionResult UpdateUser(UserPutDto dto)
+        public IActionResult UpdateUser([FromForm]UserPutDto dto)
         {
-            var accessToken = _httpContextAccessor.HttpContext!.Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
-
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var token = tokenHandler.ReadJwtToken(accessToken);
-
-            var userIdClaim = token.Claims.FirstOrDefault(c => c.Type == "UserID");
-
-            var user = _dbContext.Users.FirstOrDefault(x => x.Id == userIdClaim!.Value);
+            var user = _dbContext.Users.FirstOrDefault(x => x.Id == GetLoggedUserId());
 
             user.Name= dto.Name;
             user.UserName = dto.UserName;
@@ -88,6 +84,33 @@ namespace Project.Controllers
             return Ok();
         }
 
+        [HttpGet("GetUserDetailes/{id}")]
+        public IActionResult GetUserDetailes(string id)
+        {
+            var user = _dbContext.Users.Include(x=>x.Posts).FirstOrDefault(x => x.Id == id);
+
+            if (user is null) return NotFound();
+
+            var dto = _mapper.Map<User, UserDetailedGetDto>(user);
+
+            return Ok(dto);
+        }
+
+        [HttpDelete("DeleteUser/{id}")]
+        public IActionResult DeleteUser(string id)
+        {
+            var user = _dbContext.Users.Include(x => x.Comments).FirstOrDefault(x => x.Id == id);
+
+            if (user is null) return NotFound();
+
+            _dbContext.Users.Remove(user);
+            _dbContext.SaveChanges();
+
+            return Ok();
+        }
+
+
+        //JWT Token Methods
         private string GetToken(string Id)
         {
             var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JWT:Secret"]));
@@ -103,5 +126,16 @@ namespace Project.Controllers
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
+        private string GetLoggedUserId()
+        {
+            var accessToken = _httpContextAccessor.HttpContext!.Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
+
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var token = tokenHandler.ReadJwtToken(accessToken);
+
+            var userIdClaim = token.Claims.FirstOrDefault(c => c.Type == "UserID");
+
+            return userIdClaim!.Value;
+        }
     }
 }

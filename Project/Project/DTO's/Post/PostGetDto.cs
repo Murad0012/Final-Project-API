@@ -4,6 +4,7 @@ namespace Project.DTO_s.Post
 {
     public class PostGetDto
     {
+        public int Id { get; set; }
         public string Caption { get; set; }
         public string Img { get; set; }
         public string Tags { get; set; }

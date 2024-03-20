@@ -25,18 +25,11 @@ namespace Project.Controllers
         }
 
         [HttpPost]
-        public IActionResult AddComment(int postId,CommentPostDto dto)
+        public IActionResult AddComment(int postId,[FromForm]CommentPostDto dto)
         {
-            var accessToken = _httpContextAccessor.HttpContext!.Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
-
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var token = tokenHandler.ReadJwtToken(accessToken);
-
-            var userIdClaim = token.Claims.FirstOrDefault(c => c.Type == "UserID");
-
             var comment = new Comment
             {
-                UserId = userIdClaim!.Value,
+                UserId = GetLoggedUserId(),
                 PostId = postId,
                 Description = dto.Description,
             };
@@ -45,6 +38,19 @@ namespace Project.Controllers
             _dbContext.SaveChanges();
 
             return Ok();
+        }
+
+        //JWT Token Method
+        private string GetLoggedUserId()
+        {
+            var accessToken = _httpContextAccessor.HttpContext!.Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
+
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var token = tokenHandler.ReadJwtToken(accessToken);
+
+            var userIdClaim = token.Claims.FirstOrDefault(c => c.Type == "UserID");
+
+            return userIdClaim!.Value;
         }
     }
 }
