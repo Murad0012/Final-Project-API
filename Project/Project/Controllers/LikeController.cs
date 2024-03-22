@@ -1,8 +1,10 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Project.Data;
 using Project.DTO_s.Comment;
+using Project.DTO_s.Post;
 using Project.Entities;
 using System.IdentityModel.Tokens.Jwt;
 
@@ -14,15 +16,17 @@ namespace Project.Controllers
     {
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly AppDbContext _dbContext;
+        private readonly IMapper _mapper;
 
-        public LikeController(IHttpContextAccessor httpContextAccessor, AppDbContext dbContext)
+        public LikeController(IHttpContextAccessor httpContextAccessor, AppDbContext dbContext, IMapper mapper)
         {
             _httpContextAccessor = httpContextAccessor;
             _dbContext = dbContext;
+            _mapper = mapper;
         }
 
-        [HttpPost]
-        public IActionResult AddComment(int postId)
+        [HttpPost("AddLike")]
+        public async Task<IActionResult> AddLike(int postId)
         {
             var like = new Like
             {
@@ -30,8 +34,29 @@ namespace Project.Controllers
                 PostId = postId,
             };
 
+            var foundedLike = await _dbContext.Likes
+                .Where(l => l.PostId == postId && l.UserId == GetLoggedUserId())
+                .FirstOrDefaultAsync();
+
+            if (foundedLike != null) { return BadRequest(); }
+
             _dbContext.Likes.Add(like);
             _dbContext.SaveChanges();
+
+            return Ok();
+        }
+
+        [HttpDelete]
+        public async Task<IActionResult> UnlikePost(int postId)
+        {
+            var like = await _dbContext.Likes
+                .Where(l => l.PostId == postId && l.UserId == GetLoggedUserId())
+                .FirstOrDefaultAsync();
+
+            if (like == null) { return NotFound(); }
+
+            _dbContext.Likes.Remove(like);
+            await _dbContext.SaveChangesAsync();
 
             return Ok();
         }
