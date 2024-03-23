@@ -2,6 +2,7 @@
 using Project.DTO_s.Account;
 using Project.DTO_s.Comment;
 using Project.DTO_s.Post;
+using Project.DTO_s.Relationship;
 using Project.Entities;
 
 namespace Project.Automapper

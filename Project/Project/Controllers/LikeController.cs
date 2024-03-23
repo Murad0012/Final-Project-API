@@ -25,8 +25,8 @@ namespace Project.Controllers
             _mapper = mapper;
         }
 
-        [HttpPost("AddLike")]
-        public async Task<IActionResult> AddLike(int postId)
+        [HttpPost("Like")]
+        public async Task<IActionResult> Like(int postId)
         {
             var like = new Like
             {
@@ -46,8 +46,8 @@ namespace Project.Controllers
             return Ok();
         }
 
-        [HttpDelete]
-        public async Task<IActionResult> UnlikePost(int postId)
+        [HttpDelete("Unlike")]
+        public async Task<IActionResult> Unlike(int postId)
         {
             var like = await _dbContext.Likes
                 .Where(l => l.PostId == postId && l.UserId == GetLoggedUserId())

@@ -244,6 +244,29 @@ namespace Project.Migrations
                     b.ToTable("Posts");
                 });
 
+            modelBuilder.Entity("Project.Entities.Relationship", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("FollowerId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("FollowingId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FollowerId");
+
+                    b.HasIndex("FollowingId");
+
+                    b.ToTable("Relationships");
+                });
+
             modelBuilder.Entity("Project.Entities.User", b =>
                 {
                     b.Property<string>("Id")
@@ -421,6 +444,21 @@ namespace Project.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Project.Entities.Relationship", b =>
+                {
+                    b.HasOne("Project.Entities.User", "Follower")
+                        .WithMany("Followers")
+                        .HasForeignKey("FollowerId");
+
+                    b.HasOne("Project.Entities.User", "Following")
+                        .WithMany("Followings")
+                        .HasForeignKey("FollowingId");
+
+                    b.Navigation("Follower");
+
+                    b.Navigation("Following");
+                });
+
             modelBuilder.Entity("Project.Entities.Post", b =>
                 {
                     b.Navigation("Comments");
@@ -429,6 +467,10 @@ namespace Project.Migrations
             modelBuilder.Entity("Project.Entities.User", b =>
                 {
                     b.Navigation("Comments");
+
+                    b.Navigation("Followers");
+
+                    b.Navigation("Followings");
 
                     b.Navigation("Posts");
                 });

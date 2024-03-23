@@ -10,5 +10,8 @@ namespace Project.Entities
 
         public List<Post> Posts { get; set; }
         public List<Comment> Comments { get; set; }
+        public List<Relationship> Followers { get; set; }
+        public List<Relationship> Followings { get; set; }
+
     }
 }
