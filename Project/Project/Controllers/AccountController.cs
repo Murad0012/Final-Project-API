@@ -68,6 +68,26 @@ namespace Project.Controllers
             return Ok(newUser.Id);
         }
 
+        [HttpGet("GetUsers")]
+        public IActionResult GetUsers()
+        {
+            var users = _dbContext.Users.AsNoTracking().Select(x => _mapper.Map<User, UserGetDto>(x)).ToList();
+
+            return Ok(users);
+        }
+
+        [HttpGet("GetUserDetailes/{id}")]
+        public IActionResult GetUserDetailes(string id)
+        {
+            var user = _dbContext.Users.Include(x=>x.Posts).FirstOrDefault(x => x.Id == id);
+
+            if (user is null) return NotFound();
+
+            var dto = _mapper.Map<User, UserDetailedGetDto>(user);
+
+            return Ok(dto);
+        }
+
         [HttpPut("UpdateUser")]
         public IActionResult UpdateUser([FromForm]UserPutDto dto)
         {
@@ -82,18 +102,6 @@ namespace Project.Controllers
             _dbContext.SaveChanges();
 
             return Ok();
-        }
-
-        [HttpGet("GetUserDetailes/{id}")]
-        public IActionResult GetUserDetailes(string id)
-        {
-            var user = _dbContext.Users.Include(x=>x.Posts).FirstOrDefault(x => x.Id == id);
-
-            if (user is null) return NotFound();
-
-            var dto = _mapper.Map<User, UserDetailedGetDto>(user);
-
-            return Ok(dto);
         }
 
         [HttpDelete("DeleteUser/{id}")]

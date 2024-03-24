@@ -18,6 +18,7 @@ namespace Project.Automapper
             CreateMap<UserPutDto, User>();
             CreateMap<User, UserDetailedGetDto>();
             CreateMap<Post, PostDto>();
+            CreateMap<User, UserGetDto>();
         }
     }
 }
