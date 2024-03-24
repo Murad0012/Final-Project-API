@@ -34,6 +34,69 @@ namespace Project.Controllers
             _mapper = mapper;
         }
 
+        [HttpGet("ShowUserFollowers")]
+        public async Task<IActionResult> ShowUserFollowers(string userId)
+        {
+            var users = await _dbContext.Relationships
+                        .Where(r => r.FollowingId == userId)
+                        .Select(r => r.Follower)
+                        .ToListAsync();
+
+            if (users == null) return NotFound();
+
+            var followersDto = users.Select(follower => new UserGetDto
+            {
+                Id = follower.Id,
+                UserName = follower.UserName,
+            });
+
+            return Ok(followersDto);
+        }
+
+        [HttpGet("ShowUserFollowings")]
+        public async Task<IActionResult> ShowUserFollowings(string userId)
+        {
+            var users = await _dbContext.Relationships
+                .Where(r => r.FollowerId == userId)
+                .Select(r => r.Following)
+                .ToListAsync();
+
+            if (users == null || !users.Any())
+                return NotFound();
+
+            var followersDto = users.Select(follower => new UserGetDto
+            {
+                Id = follower.Id,
+                UserName = follower.UserName,
+            });
+
+            return Ok(followersDto);
+        }
+
+        [HttpGet("GetNonFollowedUsers")]
+        public async Task<IActionResult> GetNonFollowedUsers()
+        {
+            var allUsers = await _dbContext.Users.ToListAsync();
+
+            var followedUserIds = await _dbContext.Relationships
+                .Where(r => r.FollowerId == GetLoggedUserId())
+                .Select(r => r.FollowingId)
+                .ToListAsync();
+
+            var nonFollowedUsers = allUsers
+                .Where(u => !followedUserIds.Contains(u.Id))
+                        .Select(u => new UserGetDto
+                        {
+                            Id = u.Id,
+                            UserName = u.UserName,
+                        })
+                        .ToList();
+            
+            var users = nonFollowedUsers.Where(x => x.Id != GetLoggedUserId()).ToList();
+
+            return Ok(users);
+        }
+
         [HttpPost("Follow")]
         public async Task<IActionResult> Follow(string followedId)
         {
@@ -74,44 +137,6 @@ namespace Project.Controllers
             return Ok();
         }
 
-        [HttpGet("ShowUserFollowers")]
-        public async Task<IActionResult> ShowUserFollowers(string userId)
-        {
-            var users = await _dbContext.Relationships
-                        .Where(r => r.FollowingId == userId)
-                        .Select(r => r.Follower)
-                        .ToListAsync();
-
-            if (users == null) return NotFound();
-
-            var followersDto = users.Select(follower => new UserGetDto
-            {
-                Id = follower.Id,
-                UserName = follower.UserName,
-            });
-
-            return Ok(followersDto);
-        }
-
-        [HttpGet("ShowUserFollowings")]
-        public async Task<IActionResult> ShowUserFollowings(string userId)
-        {
-            var users = await _dbContext.Relationships
-                .Where(r => r.FollowerId == userId)
-                .Select(r => r.Following)
-                .ToListAsync();
-
-            if (users == null || !users.Any())
-                return NotFound();
-
-            var followersDto = users.Select(follower => new UserGetDto
-            {
-                Id = follower.Id,
-                UserName = follower.UserName,
-            });
-
-            return Ok(followersDto);
-        }
 
         //JWT Token Method
         private string GetLoggedUserId()

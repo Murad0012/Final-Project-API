@@ -26,23 +26,6 @@ namespace Project.Controllers
             _mapper = mapper;
         }
 
-        [HttpPost("CreatePost")]
-        public IActionResult CreatePost([FromForm] PostDto dto)
-        {
-            var post = new Post
-            {
-                UserId = GetLoggedUserId(),
-                Caption = dto.Caption,
-                Img = dto.Img,
-                Tags = dto.Tags,
-            };
-
-            _dbContext.Add(post);
-            _dbContext.SaveChanges();
-
-            return Ok();
-        }
-
         [HttpGet("GetPosts")]
         public IActionResult GetPosts()
         {
@@ -61,6 +44,53 @@ namespace Project.Controllers
             var dto = _mapper.Map<Post, PostDetailedGetDto>(post);
 
             return Ok(dto);
+        }
+
+        [HttpGet("FollowingUserPosts")]
+        public async Task<IActionResult> FollowingUsersPost()
+        {
+            var followedUserIds = await _dbContext.Relationships
+            .Where(r => r.FollowerId == GetLoggedUserId())
+            .Select(r => r.FollowingId)
+            .ToListAsync();
+
+            var followedUsersPosts = await _dbContext.Posts.Include(x => x.User).Include(x => x.Comments)
+                .Where(post => followedUserIds.Contains(post.UserId)).Select(x => _mapper.Map<Post, PostGetDto>(x))
+                .ToListAsync();
+
+            return Ok(followedUsersPosts);
+        }
+
+        [HttpGet("NonFollowingUsersPost")]
+        public async Task<IActionResult> NonFollowingUsersPost()
+        {
+            var followedUserIds = await _dbContext.Relationships
+            .Where(r => r.FollowerId == GetLoggedUserId())
+            .Select(r => r.FollowingId)
+            .ToListAsync();
+
+            var followedUsersPosts = await _dbContext.Posts.Include(x => x.User).Include(x => x.Comments)
+                .Where(post => !followedUserIds.Contains(post.UserId)).Select(x => _mapper.Map<Post, PostGetDto>(x))
+                .ToListAsync();
+
+            return Ok(followedUsersPosts);
+        }
+
+        [HttpPost("CreatePost")]
+        public IActionResult CreatePost([FromForm] PostDto dto)
+        {
+            var post = new Post
+            {
+                UserId = GetLoggedUserId(),
+                Caption = dto.Caption,
+                Img = dto.Img,
+                Tags = dto.Tags,
+            };
+
+            _dbContext.Add(post);
+            _dbContext.SaveChanges();
+
+            return Ok();
         }
 
         [HttpDelete("DeletePost/{id}")]

@@ -21,7 +21,7 @@ namespace Project.Controllers
             _dbContext = dbContext;
         }
 
-        [HttpPost]
+        [HttpPost("AddComment")]
         public IActionResult AddComment(int postId,[FromForm]CommentPostDto dto)
         {
             var comment = new Comment

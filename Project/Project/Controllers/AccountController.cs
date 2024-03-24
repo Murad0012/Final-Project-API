@@ -109,7 +109,6 @@ namespace Project.Controllers
             return Ok();
         }
 
-
         //JWT Token Methods
         private string GetToken(string Id)
         {
