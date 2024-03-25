@@ -16,6 +16,7 @@ namespace Project.Data
         public DbSet<User> Users { get; set; }
         public DbSet<Like> Likes { get; set; }
         public DbSet<Comment> Comments { get; set; }
+        public DbSet<SavedPost> SavedPosts { get; set; }
         public DbSet<Relationship> Relationships { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
