@@ -95,8 +95,23 @@ namespace Project.Controllers
 
             user.Name= dto.Name;
             user.UserName = dto.UserName;
-            user.ProfileImg = dto.ProfileImg;
             user.Description = dto.Description;
+
+            string path = Path.Combine(Directory.GetCurrentDirectory(), "Imgs");
+
+            if(!Directory.Exists(path)) Directory.CreateDirectory(path);    
+
+            FileInfo fileInfo = new FileInfo(dto.ProfileImgUrl.FileName);
+            string fileName = fileInfo.Name + fileInfo.Extension;
+
+            string fileNameWithPath = Path.Combine(path, fileName);
+
+            using (var stream = new FileStream(fileNameWithPath, FileMode.Create))
+            {
+                dto.ProfileImgUrl.CopyTo(stream);
+            }  
+
+            user.ProfileImg = fileName;
 
             _dbContext.Update(user);
             _dbContext.SaveChanges();
