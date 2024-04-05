@@ -73,44 +73,66 @@ namespace Project.Controllers
             return Ok(followersDto);
         }
 
-        [HttpGet("GetNonFollowedUsers")]
-        public async Task<IActionResult> GetNonFollowedUsers()
+        [HttpGet("GetNonFollowedUsers/{id}")]
+        public async Task<IActionResult> GetNonFollowedUsers(string id)
         {
             var allUsers = await _dbContext.Users.ToListAsync();
 
             var followedUserIds = await _dbContext.Relationships
-                .Where(r => r.FollowerId == GetLoggedUserId())
+                .Where(r => r.FollowerId == id)
                 .Select(r => r.FollowingId)
                 .ToListAsync();
 
             var nonFollowedUsers = allUsers
                 .Where(u => !followedUserIds.Contains(u.Id))
-                        .Select(u => new UserGetDto
-                        {
-                            Id = u.Id,
-                            UserName = u.UserName,
-                        })
-                        .ToList();
-            
-            var users = nonFollowedUsers.Where(x => x.Id != GetLoggedUserId()).ToList();
+                .Select(u => new UserGetDto
+                {
+                    Id = u.Id,
+                    UserName = u.UserName,
+                    ProfileImg = u.ProfileImg
+                })
+                .ToList();
 
-            return Ok(users);
+            var randomizedNonFollowedUsers = nonFollowedUsers
+                .Where(x => x.Id != id)
+                .OrderBy(x => Guid.NewGuid())
+                .Take(3) 
+                .ToList();
+
+            return Ok(randomizedNonFollowedUsers);
+        }
+
+        [HttpGet("CheckFollow")]
+        public async Task<bool> CheckFollow(string followedId, string userId)
+        {
+            var existingRelationship = await _dbContext.Relationships
+            .FirstOrDefaultAsync(r => r.FollowerId == userId && r.FollowingId == followedId);
+
+            if (existingRelationship == null)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+
         }
 
         [HttpPost("Follow")]
-        public async Task<IActionResult> Follow(string followedId)
+        public async Task<IActionResult> Follow(string followedId,string userId)
         {
 
-            if(followedId == GetLoggedUserId()) return Conflict("You can't follow yourself.");
+            if(followedId == userId) return Conflict("You can't follow yourself.");
 
             var existingRelationship = await _dbContext.Relationships
-            .FirstOrDefaultAsync(r => r.FollowerId == GetLoggedUserId() && r.FollowingId == followedId);
+            .FirstOrDefaultAsync(r => r.FollowerId == userId && r.FollowingId == followedId);
 
             if (existingRelationship != null) return Conflict("Relationship already exists.");
 
             var newRelationship = new Relationship
             {
-                FollowerId = GetLoggedUserId(),
+                FollowerId = userId,
                 FollowingId = followedId
             };
 
@@ -121,10 +143,10 @@ namespace Project.Controllers
         }
 
         [HttpDelete("Unfollow")]
-        public async Task<IActionResult> Unfollow(string followedId)
+        public async Task<IActionResult> Unfollow(string followedId, string userId)
         {
             var relationship = await _dbContext.Relationships
-                .FirstOrDefaultAsync(r => r.FollowerId == GetLoggedUserId() && r.FollowingId == followedId);
+                .FirstOrDefaultAsync(r => r.FollowerId == userId && r.FollowingId == followedId);
 
             if (relationship == null)
             {

@@ -29,7 +29,13 @@ namespace Project.Controllers
         [HttpGet("GetPosts")]
         public IActionResult GetPosts()
         {
-            var posts = _dbContext.Posts.Include(x=>x.User).AsNoTracking().Select(x=> _mapper.Map<Post,PostGetDto>(x)).ToList();
+            var posts = _dbContext.Posts.Include(x => x.User)
+                                          .AsNoTracking()
+                                          .Select(x => _mapper.Map<Post, PostGetDto>(x))
+                                          .ToList();
+
+            var random = new Random();
+            posts = posts.OrderBy(x => random.Next()).ToList();
 
             return Ok(posts);
         }
@@ -37,11 +43,21 @@ namespace Project.Controllers
         [HttpGet("GetPost/{id}")]
         public IActionResult GetPost(int id)
         {
-            var post = _dbContext.Posts.Include(x => x.User).Include(x=>x.Comments).ThenInclude(x => x.User).FirstOrDefault(x=>x.Id == id);
+            var post = _dbContext.Posts
+                                  .Include(x => x.User)
+                                  .Include(x => x.Comments)
+                                  .Include(x => x.Likes)
+                                      .ThenInclude(x => x.User)
+                                  .FirstOrDefault(x => x.Id == id);
 
-            if (post is null) return NotFound();
-                
+            if (post is null)
+                return NotFound();
+
+            Console.WriteLine(post.Likes.Count());
+
             var dto = _mapper.Map<Post, PostDetailedGetDto>(post);
+
+            dto.LikeCount = post.Likes.Count();
 
             return Ok(dto);
         }
@@ -61,11 +77,11 @@ namespace Project.Controllers
             return Ok(followedUsersPosts);
         }
 
-        [HttpGet("NonFollowingUsersPost")]
-        public async Task<IActionResult> NonFollowingUsersPost()
+        [HttpGet("Explore/{id}")]
+        public async Task<IActionResult> Explore(string id)
         {
             var followedUserIds = await _dbContext.Relationships
-            .Where(r => r.FollowerId == GetLoggedUserId())
+            .Where(r => r.FollowerId == id)
             .Select(r => r.FollowingId)
             .ToListAsync();
 
@@ -81,11 +97,25 @@ namespace Project.Controllers
         {
             var post = new Post
             {
-                UserId = GetLoggedUserId(),
+                UserId = dto.UserId,
                 Caption = dto.Caption,
-                Img = dto.Img,
                 Tags = dto.Tags,
             };
+
+            string path = Path.Combine(Directory.GetCurrentDirectory(), "Imgs");
+
+            if (!Directory.Exists(path))
+                Directory.CreateDirectory(path);
+
+            string fileName = Guid.NewGuid().ToString() + Path.GetExtension(dto.Img.FileName);
+            string fileNameWithPath = Path.Combine(path, fileName);
+
+            using (var stream = new FileStream(fileNameWithPath, FileMode.Create))
+            {
+                dto.Img.CopyTo(stream);
+            }
+
+            post.Img = fileName;
 
             _dbContext.Add(post);
             _dbContext.SaveChanges();
@@ -93,10 +123,11 @@ namespace Project.Controllers
             return Ok();
         }
 
+
         [HttpDelete("DeletePost/{id}")]
         public IActionResult DeletePost(int id)
         {
-            var post = _dbContext.Posts.Include(x=>x.Comments).FirstOrDefault(x => x.Id == id);
+            var post = _dbContext.Posts.Include(x=>x.Comments).Include(x=>x.Likes).Include(x=>x.SavedPosts).FirstOrDefault(x => x.Id == id);
 
             if (post is null) return NotFound();
 
@@ -106,10 +137,10 @@ namespace Project.Controllers
             return Ok();
         }
 
-        [HttpPut("UpdatePost/{id}")]
-        public IActionResult UpdatePost(int id,[FromForm] PostPutDto dto)
+        [HttpPut("UpdatePost")]
+        public IActionResult UpdatePost([FromBody] PostPutDto dto)
         {
-            var post = _dbContext.Posts.FirstOrDefault(x=>x.Id == id);
+            var post = _dbContext.Posts.FirstOrDefault(x=>x.Id == dto.Id);
             if (post is null) return NotFound();
             
             _mapper.Map(dto, post);

@@ -23,14 +23,96 @@ namespace Project.Controllers
             _mapper = mapper;
         }
 
-        [HttpGet("Search")]
-        public async Task<ActionResult> Search(string username)
+        [HttpGet("SearchUser")]
+        public async Task<ActionResult> Search(string username, string filterType, string userId)
         {
-            var users = await _dbContext.Users
-            .Where(u => u.UserName.Contains(username)).Select(x => _mapper.Map<User, UserGetDto>(x))
-            .ToListAsync();
+            if (username == "." && filterType == "all")
+            {
+                var users = await _dbContext.Users.Select(x => _mapper.Map<User, UserGetDto>(x)).ToListAsync();
 
-            return Ok(users);
+                return Ok(users);
+            }
+
+            if (username == "." && filterType == "following")
+            {
+                var users = await _dbContext.Relationships
+                .Where(r => r.FollowerId == userId)
+                .Select(r => r.Following)
+                .ToListAsync();
+
+                var followersDto = users.Select(follower => new UserGetDto
+                {
+                    Id = follower.Id,
+                    UserName = follower.UserName,
+                    ProfileImg = follower.ProfileImg
+                });
+
+                return Ok(followersDto);
+            }
+
+            if (username == "." && filterType == "follows")
+            {
+                var users = await _dbContext.Relationships
+                        .Where(r => r.FollowingId == userId)
+                        .Select(r => r.Follower)
+                        .ToListAsync();
+
+                var followersDto = users.Select(follower => new UserGetDto
+                {
+                    Id = follower.Id,
+                    UserName = follower.UserName,
+                    ProfileImg = follower.ProfileImg
+                });
+
+                return Ok(followersDto);
+            }
+
+            if (filterType == "all")
+            {
+                var users = await _dbContext.Users
+                    .Where(u => u.UserName.Contains(username))
+                    .Select(x => _mapper.Map<User, UserGetDto>(x))
+                    .ToListAsync();
+
+                return Ok(users);
+            }
+            else if (filterType == "following")
+            {
+                var followedUserIds = await _dbContext.Relationships
+                    .Where(r => r.FollowerId == userId)
+                    .Select(r => r.FollowingId)
+                    .ToListAsync();
+
+                var users = await _dbContext.Users
+                    .Where(u => followedUserIds.Contains(u.Id) && u.UserName.Contains(username))
+                    .Select(x => _mapper.Map<User, UserGetDto>(x))
+                    .ToListAsync();
+
+                return Ok(users);
+            }
+            else if (filterType == "follows")
+            {
+                var followers = await _dbContext.Relationships
+                .Where(r => r.FollowingId == userId)
+                .Select(r => r.Follower).Where(f => f.UserName.Contains(username))
+                .ToListAsync();
+
+                var users =  followers
+                    .Select(follower => new UserGetDto
+                    {
+                        Id = follower.Id,
+                        UserName = follower.UserName,
+                        ProfileImg = follower.ProfileImg
+                    });
+
+                return Ok(users);
+            }
+            else
+            {
+                return BadRequest("Invalid filter type.");
+            }
         }
+
+
     }
 }

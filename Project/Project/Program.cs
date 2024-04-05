@@ -10,6 +10,8 @@ using Project.Data;
 using Project.Entities;
 using Project.Helpers;
 using Microsoft.OpenApi.Models;
+using Microsoft.Extensions.FileProviders;
+using System.IO;
 
 namespace Project
 {
@@ -52,6 +54,12 @@ namespace Project
 
             var app = builder.Build();
 
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider = new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), "Imgs")),
+                RequestPath = "/Imgs"
+            });
+
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
@@ -62,6 +70,12 @@ namespace Project
 
             app.UseAuthentication();
             app.UseAuthorization();
+
+            app.UseCors(x => x
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .SetIsOriginAllowed(orgin => true)
+            .AllowCredentials());
             
             app.MapControllers();
 

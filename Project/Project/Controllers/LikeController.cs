@@ -25,17 +25,34 @@ namespace Project.Controllers
             _mapper = mapper;
         }
 
+        [HttpGet("CheckFollow")]
+        public async Task<bool> CheckFollow(int postId, string userId)
+        {
+            var existingLike = await _dbContext.Likes
+             .FirstOrDefaultAsync(l => l.PostId == postId && l.UserId == userId);
+
+            if (existingLike == null)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+
         [HttpPost("Like")]
-        public async Task<IActionResult> Like(int postId)
+        public async Task<IActionResult> Like(int postId, string userId)
         {
             var like = new Like
             {
-                UserId = GetLoggedUserId(),
+                UserId = userId,
                 PostId = postId,
             };
 
             var foundedLike = await _dbContext.Likes
-                .Where(l => l.PostId == postId && l.UserId == GetLoggedUserId())
+                .Where(l => l.PostId == postId && l.UserId == userId)
                 .FirstOrDefaultAsync();
 
             if (foundedLike != null) { return BadRequest(); }
@@ -47,10 +64,10 @@ namespace Project.Controllers
         }
 
         [HttpDelete("Unlike")]
-        public async Task<IActionResult> Unlike(int postId)
+        public async Task<IActionResult> Unlike(int postId, string userId)
         {
             var like = await _dbContext.Likes
-                .Where(l => l.PostId == postId && l.UserId == GetLoggedUserId())
+                .Where(l => l.PostId == postId && l.UserId == userId)
                 .FirstOrDefaultAsync();
 
             if (like == null) { return NotFound(); }

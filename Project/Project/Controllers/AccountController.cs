@@ -38,7 +38,7 @@ namespace Project.Controllers
         }
 
         [HttpPost("Login")]
-        public async Task<IActionResult> Login([FromForm] LoginDto dto)
+        public async Task<IActionResult> Login([FromBody] LoginDto dto)
         {
             var result = await _signInManager.PasswordSignInAsync(dto.UserName, dto.Password,false,false);
 
@@ -48,11 +48,15 @@ namespace Project.Controllers
 
             var token = GetToken(user.Id);
 
-            return Ok(token);
+            return Ok(new UserInfoDto
+            {
+                Token = token,
+                UserName = dto.UserName,    
+            });
         }
 
         [HttpPost("Register")]
-        public async Task<IActionResult> Register([FromForm] RegisterDto dto)
+        public async Task<IActionResult> Register([FromBody] RegisterDto dto)
         {
             var newUser = new User
             {
@@ -77,7 +81,7 @@ namespace Project.Controllers
         }
 
         [HttpGet("GetUserDetailes/{id}")]
-        public IActionResult GetUserDetailes(string id)
+        public async Task<IActionResult> GetUserDetailes(string id)
         {
             var user = _dbContext.Users.Include(x=>x.Posts).FirstOrDefault(x => x.Id == id);
 
@@ -85,39 +89,68 @@ namespace Project.Controllers
 
             var dto = _mapper.Map<User, UserDetailedGetDto>(user);
 
+            dto.Posts.Reverse();
+
+            var following = await _dbContext.Relationships
+                .Where(r => r.FollowerId == id)
+                .Select(r => r.Following)
+                .ToListAsync();
+
+            dto.FollowingCount = following.Count;
+
+            var follows = await _dbContext.Relationships
+                        .Where(r => r.FollowingId == id)
+                        .Select(r => r.Follower)
+                        .ToListAsync();
+
+            dto.FollowsCount = follows.Count;
+
             return Ok(dto);
         }
 
         [HttpPut("UpdateUser")]
-        public IActionResult UpdateUser([FromForm]UserPutDto dto)
+        public IActionResult UpdateUser([FromForm] UserPutDto dto)
         {
-            var user = _dbContext.Users.FirstOrDefault(x => x.Id == GetLoggedUserId());
+            var user = _dbContext.Users.FirstOrDefault(x => x.Id == dto.UserId);
 
-            user.Name= dto.Name;
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            user.Name = dto.Name;
             user.UserName = dto.UserName;
             user.Description = dto.Description;
-
+ 
             string path = Path.Combine(Directory.GetCurrentDirectory(), "Imgs");
+             
+            if (!Directory.Exists(path))
+            {
+                Directory.CreateDirectory(path);
+            }
 
-            if(!Directory.Exists(path)) Directory.CreateDirectory(path);    
-
-            FileInfo fileInfo = new FileInfo(dto.ProfileImgUrl.FileName);
-            string fileName = fileInfo.Name + fileInfo.Extension;
-
+            string fileName = Guid.NewGuid().ToString() + Path.GetExtension(dto.ProfileImg.FileName);
             string fileNameWithPath = Path.Combine(path, fileName);
 
-            using (var stream = new FileStream(fileNameWithPath, FileMode.Create))
+            if (Directory.GetFiles(path, fileName).Length > 0)
             {
-                dto.ProfileImgUrl.CopyTo(stream);
-            }  
-
-            user.ProfileImg = fileName;
+                return BadRequest("File with the same name already exists.");
+            }
+            else
+            {
+                using (var stream = new FileStream(fileNameWithPath, FileMode.Create))
+                {
+                    dto.ProfileImg.CopyTo(stream);
+                }
+                user.ProfileImg = fileName;
+            }
 
             _dbContext.Update(user);
             _dbContext.SaveChanges();
 
             return Ok();
         }
+
 
         [HttpDelete("DeleteUser/{id}")]
         public IActionResult DeleteUser(string id)
@@ -150,7 +183,7 @@ namespace Project.Controllers
 
         private string GetLoggedUserId()
         {
-            var accessToken = _httpContextAccessor.HttpContext!.Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
+            var accessToken = _httpContextAccessor.HttpContext!.Request.Headers["Authorization"].ToString().Replace("Bearer", "");
 
             var tokenHandler = new JwtSecurityTokenHandler();
             var token = tokenHandler.ReadJwtToken(accessToken);

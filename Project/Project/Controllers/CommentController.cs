@@ -18,16 +18,16 @@ namespace Project.Controllers
         public CommentController(IHttpContextAccessor httpContextAccessor, AppDbContext dbContext)
         {
             _httpContextAccessor = httpContextAccessor;
-            _dbContext = dbContext;
+            _dbContext = dbContext; 
         }
 
         [HttpPost("AddComment")]
-        public IActionResult AddComment(int postId,[FromForm]CommentPostDto dto)
+        public IActionResult AddComment([FromBody]CommentPostDto dto)
         {
             var comment = new Comment
             {
-                UserId = GetLoggedUserId(),
-                PostId = postId,
+                UserId = dto.UserId,
+                PostId = dto.PostId,
                 Description = dto.Description,
             };
 

@@ -26,16 +26,18 @@ namespace Project.Controllers
         }
 
         [HttpGet("GetSavedPosts")]
-        public async Task<IActionResult> GetSavedPosts()
+        public async Task<IActionResult> GetSavedPosts(string userId)
         {
             var userIds = await _dbContext.SavedPosts
-            .Where(r => r.UserId == GetLoggedUserId())
+            .Where(r => r.UserId == userId)
             .Select(r => r.PostId)
             .ToListAsync();
 
             var res = await _dbContext.Posts.Include(x => x.User).Include(x => x.Comments)
                 .Where(post => userIds.Contains(post.Id)).Select(x => _mapper.Map<Post, PostGetDto>(x))
                 .ToListAsync();
+
+            res.Reverse();
 
             return Ok(res);
         }
@@ -56,17 +58,32 @@ namespace Project.Controllers
             return Ok(res);
         }
 
+        [HttpGet("CheckSave")]
+        public async Task<bool> CheckSave(int postId, string userId)
+        {
+            var existingSavedPost = await _dbContext.SavedPosts.FirstOrDefaultAsync(l => l.PostId == postId && l.UserId == userId);
+
+            if (existingSavedPost == null)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
         [HttpPost("Save")]
-        public async Task<IActionResult> Save(int postId)
+        public async Task<IActionResult> Save(int postId,string userId)
         {
             var SavedPost = new SavedPost
             {
-                UserId = GetLoggedUserId(),
+                UserId = userId,
                 PostId = postId,
             };
 
             var savedPost = await _dbContext.SavedPosts
-                .Where(l => l.PostId == postId && l.UserId == GetLoggedUserId())
+                .Where(l => l.PostId == postId && l.UserId == userId)
                 .FirstOrDefaultAsync();
 
             if (savedPost != null) { return BadRequest(); }
@@ -78,10 +95,10 @@ namespace Project.Controllers
         }
 
         [HttpDelete("Unsave")]
-        public async Task<IActionResult> Unsave(int postId)
+        public async Task<IActionResult> Unsave(int postId, string userId)
         {
             var savedPost = await _dbContext.SavedPosts
-                .Where(l => l.PostId == postId && l.UserId == GetLoggedUserId())
+                .Where(l => l.PostId == postId && l.UserId == userId)
                 .FirstOrDefaultAsync();
 
             if (savedPost == null) { return NotFound(); }
