@@ -17,7 +17,7 @@ namespace Project
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
 
@@ -53,6 +53,8 @@ namespace Project
             builder.Services.AddAppServices(builder);
 
             var app = builder.Build();
+
+            await DataSeed.Initialize(app.Services);
 
             app.UseStaticFiles(new StaticFileOptions
             {

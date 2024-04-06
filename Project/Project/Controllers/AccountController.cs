@@ -46,13 +46,17 @@ namespace Project.Controllers
 
             var user = _dbContext.Users.FirstOrDefault(x=>x.UserName == dto.UserName);
 
+            var roles = await _userManager.GetRolesAsync(user);
+
             var token = GetToken(user.Id);
 
             return Ok(new UserInfoDto
             {
                 Token = token,
                 UserName = dto.UserName,    
+                Role = roles[0]
             });
+
         }
 
         [HttpPost("Register")]
@@ -67,18 +71,25 @@ namespace Project.Controllers
 
             var result = await _userManager.CreateAsync(newUser ,dto.Password);
 
+            await _userManager.AddToRoleAsync(newUser, "User");
+
             if (!result.Succeeded) return BadRequest(result.Errors);
 
             return Ok(newUser.Id);
         }
 
         [HttpGet("GetUsers")]
-        public IActionResult GetUsers()
+        public IActionResult GetUsers(string id)
         {
-            var users = _dbContext.Users.AsNoTracking().Select(x => _mapper.Map<User, UserGetDto>(x)).ToList();
+            var users = _dbContext.Users
+                .Where(u => u.Id != id) 
+                .AsNoTracking()
+                .Select(x => _mapper.Map<User, UserGetDto>(x))
+                .ToList();
 
             return Ok(users);
         }
+
 
         [HttpGet("GetUserDetailes/{id}")]
         public async Task<IActionResult> GetUserDetailes(string id)
@@ -121,28 +132,31 @@ namespace Project.Controllers
             user.Name = dto.Name;
             user.UserName = dto.UserName;
             user.Description = dto.Description;
- 
+
             string path = Path.Combine(Directory.GetCurrentDirectory(), "Imgs");
-             
+
             if (!Directory.Exists(path))
             {
                 Directory.CreateDirectory(path);
             }
 
-            string fileName = Guid.NewGuid().ToString() + Path.GetExtension(dto.ProfileImg.FileName);
-            string fileNameWithPath = Path.Combine(path, fileName);
+            if (dto.ProfileImg != null && dto.ProfileImg.Length > 0) // Check if the file is not empty
+            {
+                string fileName = Guid.NewGuid().ToString() + Path.GetExtension(dto.ProfileImg.FileName);
+                string fileNameWithPath = Path.Combine(path, fileName);
 
-            if (Directory.GetFiles(path, fileName).Length > 0)
-            {
-                return BadRequest("File with the same name already exists.");
-            }
-            else
-            {
-                using (var stream = new FileStream(fileNameWithPath, FileMode.Create))
+                if (Directory.GetFiles(path, fileName).Length > 0)
                 {
-                    dto.ProfileImg.CopyTo(stream);
+                    return BadRequest("File with the same name already exists.");
                 }
-                user.ProfileImg = fileName;
+                else
+                {
+                    using (var stream = new FileStream(fileNameWithPath, FileMode.Create))
+                    {
+                        dto.ProfileImg.CopyTo(stream);
+                    }
+                    user.ProfileImg = fileName;
+                }
             }
 
             _dbContext.Update(user);
@@ -151,19 +165,37 @@ namespace Project.Controllers
             return Ok();
         }
 
-
-        [HttpDelete("DeleteUser/{id}")]
+        [HttpDelete("DeleteUser")]
         public IActionResult DeleteUser(string id)
         {
-            var user = _dbContext.Users.Include(x => x.Comments).FirstOrDefault(x => x.Id == id);
+            var user = _dbContext.Users
+                .Include(x => x.Comments)
+                .Include(x => x.Followers)
+                .Include(x => x.Followings)
+                .Include(x => x.Likes)
+                .Include(x => x.SavedPosts)
+                .Include(x => x.Posts)
+                    .ThenInclude(x => x.Comments)
+                .Include(x => x.Posts)
+                    .ThenInclude(x => x.Likes)
+                .Include(x => x.Posts)
+                    .ThenInclude(x => x.SavedPosts)
+                .FirstOrDefault(x => x.Id == id);
 
-            if (user is null) return NotFound();
+            if (user is null)
+                return NotFound();
+
+            var relationships = _dbContext.Relationships
+                .Where(r => r.FollowerId == id || r.FollowingId == id)
+                .ToList();
+            _dbContext.Relationships.RemoveRange(relationships);
 
             _dbContext.Users.Remove(user);
             _dbContext.SaveChanges();
 
             return Ok();
         }
+
 
         //JWT Token Methods
         private string GetToken(string Id)
